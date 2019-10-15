@@ -1,12 +1,26 @@
 #!/usr/bin/Rscript
-# Create genotype by checking SNPs in the phenotype file
-outGenotypeGwaspoly = "agrosavia-genotype-gwaspoly-checked.tbl"
-outInvalidSNPs      = "agrosavia-genotype-gwaspoly-checked.errors"
+#-----------------------------------------------------------
+# Create genotype by checking Marker SNPs in the phenotype file
+#-----------------------------------------------------------
+args = commandArgs(trailingOnly = TRUE)
 
-ph = read.table ("agrosavia-phenotype-gwaspoly.tbl", header=T, sep=",")
+# inputs
+inGenoFile = args [1]
+inPhenoFile  = "agrosavia-phenotype-gwaspoly.tbl"
+
+#inPhenoFile = "agrosavia-phenotype-gwaspoly.tbl"
+#inGenoFile  = "agrosavia-genotype-gwaspoly.tbl"
+
+# outputs
+filename = strsplit (inGenoFile, "[.]")[[1]][1] 
+outGenotypeGwaspoly = sprintf ("%s-checked.tbl", filename)
+outInvalidSNPs      = sprintf ("%s-checked-errors.tbl", filename)
+
+
+ph = read.table (inPhenoFile, header=T, sep=",")
 snps = as.vector (ph [,1])
 
-gn = read.table ("agrosavia-genotype-gwaspoly.tbl", header=T, sep=",")
+gn = read.table (inGenoFile, header=T, sep=",")
 gnSnps = colnames (gn)[-(1:3)] 
 
 gnTbl = data.frame (gn [,1:3])
@@ -23,5 +37,5 @@ for (sn in snps) {
   
 }
 
-write.table (file=outGenotypeGwaspoly, gnTbl, quote=F, sep=",", row.names=F)
-write.table (file=outInvalidSNPs, errorsTbl, col.names=F,row.names=F)
+write.table (file=outGenotypeGwaspoly, gnTbl, quote=F, sep=",", row.names=T)
+write.table (file=outInvalidSNPs, errorsTbl, col.names=F,row.names=T)
