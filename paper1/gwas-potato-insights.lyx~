@@ -98,10 +98,13 @@ status open
 \begin_layout Plain Layout
 
 \series bold
+\size footnotesize
 Bourke2018:
 \end_layout
 
 \begin_layout Plain Layout
+
+\size footnotesize
 One challenge in applying GWAS to polyploid species is how to define a relatedne
 ss metric between polyploid individuals (i.e., how to generate the kinship
  matrix, K).
@@ -142,12 +145,15 @@ status open
 \begin_layout Plain Layout
 
 \series bold
+\size footnotesize
 Ferrao2018
 \series default
 :
 \end_layout
 
 \begin_layout Plain Layout
+
+\size footnotesize
 Eight gene action models were tested for the tetraploid genotype calling:
  general, additive, simplex dominant alternative (simplex-dom-alt), simplex
  dominant reference (simplex-dom-ref), duplex dominant alternative (duplex-dom-a
