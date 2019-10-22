@@ -1,15 +1,17 @@
 #!/usr/bin/Rscript
+# r1.2: Functions + write to RData cache
 # r0.1: Functions + write to RData cache
+
+USAGE="USAGE: gwas-pipeline-poly.R <phenotype> <genotype> [structure]"
 
 library (GWASpoly)
 args = commandArgs(trailingOnly = TRUE)
-print (args)
+
 setClass ("GWASpolyStruct", slots=c(params="list"), contains="GWASpoly.K")
 
 options (width=300)
 
 #gwasModelsTypes = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
-#snpModels       = c("general","additive","1-dom", "2-dom")
 #snpModels       = c("general","additive","1-dom", "2-dom")
 #testModels      = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
 ##gwasModelsTypes = c("Kinship")
@@ -19,65 +21,88 @@ options (width=300)
 ##multipleTestingModel = "permute"
 #gwasModelsTypes = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
 multipleTestingModel = "Bonferroni" 
-gwasModel            = "Kinship"
 snpModels            = c("general","additive","1-dom", "2-dom")
 testModels           = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
 #snpModels            = c("general")
 #testModels           = c("general")
-testTraits           = c ("LBlight")
-nTraits              = 1
 #-------------------------------------------------------------
-#args = c (phenotypeFile = "agrosavia-phenotype-gwaspoly.tbl", genotypeFile  = "agrosavia-genotype-gwaspoly-checked.tbl")
+# Global configs
+#-------------------------------------------------------------
+#genotypeFormati = "numeric"|"AB"|"ACGT"
+genotypeFormat = "AB"
+#gwasModel = "Naive"|"Structure"|"Kinship"|"PCs"
+gwasModel      = "PCs"
+#-------------------------------------------------------------
 data = data2 = data3 = data4 = NULL
 phenotype = genotype = structure = NULL
 
 main <- function (args) {
-	#args = c ("phenotype.tbl", "genotype.tbl")
-
-	# Read and chheck matchs in files (samples, samples) and write new files
-	phenotypeFile   <- args [1]
-	genotypeFile    <- args [2]
-
-	# Load cache data
-	#if (file.exists ("gwas.RData")) load (file="gwas.RData")
-
-	data = readData (phenotypeFile, genotypeFile)
-
-	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
-	data1 <- initGWAS (phenotypeFile, genotypeFile, nTraits, data1)
+	args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
+	args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl")
+	if (length (args) == 3) {
+		phenotypeFile   <- args [1]
+		genotypeFile    <- args [2]
+		structureFile   <- args [3]
+	}else if (length (args) == 2) {
+		phenotypeFile   <- args [1]
+		genotypeFile    <- args [2]
+		structureFile =  NULL
+	}else {
+		message ("Error in the number of arguments")
+		message (USAGE)
+		quit ()
+	}
 
 	msg (">>>>>>>>>>>>", gwasModel, "<<<<<<<<<<<") 
+
+	# Read and chheck matchs in files (samples, samples) and write new files
+
+	# Load cache data
+	if (file.exists ("gwas.RData")) load (file="gwas.RData")
+
+	data = readData (phenotypeFile, genotypeFile, structureFile)
+
+	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
+	data1 <- initGWAS (phenotypeFile, genotypeFile, data1)
+
 	# Set the kinship
 	data2 <- setKinship (data1, gwasModel, data2)
 
 	# Populations structure and kinship
-	data3 <- setPopulationStructure (data2, gwasModel, phenotype, 
-									structure, phenoStruct, data3)
+	data3 <- setPopulationStructure (data2, gwasModel, data$phenotype, 
+									data$structure, data3)
 
 	# GWAS execution
-	data4 <- runGwaspoly (data3, gwasModel, snpModels, testTraits, data4)
+	data4 <- runGwaspoly (data3, gwasModel, snpModels, data$traits, data4)
 
 	# Plot results
-	showResults (data4, testModels, testTraits, gwasModel, phenotypeFile)
+	showResults (data4, testModels, data$traits, gwasModel, phenotypeFile)
 
-	#save(phenotype, genotype, data, data1, data2, data3, data4, file="gwas.RData") 
+	save(phenotype, genotype, structure, data, data1, data2, data3, data4, file="gwas.RData") 
 }
 
 #-------------------------------------------------------------
 #-------------------------------------------------------------
 
-readData <- function (phenotypeFile, genotypeFile) {
-	msg();msg ("Reading data...")
+readData <- function (phenotypeFile, genotypeFile, structureFile) {
+	msg();msg ("Reading data...");msg()
 
 	if (!is.null (c(phenotype, genotype))) {
 		msg (">>>> Loading phenotype and genotype"); 
 	}else{
 		msg (">>>> Reading phenotype and genotype"); 
-		phenotype   <<- read.table (phenotypeFile, header=T, sep=",")
-		genotype    <<- read.table (genotypeFile, header=T, sep=",")
+		phenotype   <- read.table (phenotypeFile, header=T, sep=",")
+		genotype    <- read.table (genotypeFile, header=T, sep=",")
+		if (!is.null(structureFile))		
+			structure   <- read.csv   (structureFile, header=T)
+		else
+			structure = NULL
+
+		traits  <- c(colnames (phenotype)[2])
+		print (traits)
 	}
 
-	return (list (phenotype, genotype))
+	return (list (phenotype=phenotype, genotype=genotype,structure=structure, traits=traits))
 
 }
 
@@ -119,15 +144,15 @@ setInitials <- function () {
 	testTraits <- c ("gota")
 	msg (">>>> Models: ", testModels)
 	msg (">>>> Traits: ", testTraits)
-	nTraits=1
 
-	return (list (testModels, snpModels, testTraits, nTraits))
+	return (list (testModels, snpModels, testTraits))
 }
 
 #-------------------------------------------------------------
 # Set the kinship matrix using the realized relationship matrix  
 #-------------------------------------------------------------
 setKinship <- function (data1,  gwasModel, data2) {
+	msg();msg("Setting kinship...");msg()
  	# Load data instead calculate it
 	if (!is.null (data2)) {msg ("Loading kinship..."); return (data2) }
 
@@ -148,8 +173,8 @@ setKinship <- function (data1,  gwasModel, data2) {
 #-------------------------------------------------------------
 # Fix Populations structure and kinship
 #-------------------------------------------------------------
-setPopulationStructure <- function (data2, gwasModel, phenotype, structure, phenoStruct, data3) {
-	msg();msg ("Set population structure...")
+setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data3) {
+	msg();msg ("Setting population structure...");msg()
 	#setClass ("GWASpolyStruct", slots=c(params="list"), contains="GWASpoly.K")
 	data3 = new ("GWASpolyStruct", data2)
 	
@@ -159,16 +184,16 @@ setPopulationStructure <- function (data2, gwasModel, phenotype, structure, phen
 	if (gwasModel %in% "PCs") {
 		nPCs=20
 		msg (">>>> With nPCS=", nPCs, "...")
-	}
-
-	if (gwasModel %in% c("Structure", "Kinship+Structure")) {
+	}else if (gwasModel %in% c("Structure", "Kinship+Structure")) {
 		msg (">>>> With population structure...")
 		structNames = colnames (structure[-1])
 		structTypes = rep ("numeric", length (structNames))
 
-		data3@pheno = phenoStruct
+		#data3@pheno = phenoStruct
+		data3@pheno = phenotype
 		data3@fixed = structure [,-1]
-	}
+	}else 
+		msg (">>>> Without populations structure")
 
 	data3@params = set.params(n.PC=nPCs, fixed=structNames, fixed.type=structTypes)
 
@@ -177,19 +202,20 @@ setPopulationStructure <- function (data2, gwasModel, phenotype, structure, phen
 #-------------------------------------------------------------
 # GWAS execution
 #-------------------------------------------------------------
-runGwaspoly <- function (data3, gwasModel, snpModels, testTraits, data4) {
-	msg();msg("Running GWASpoly...")
+runGwaspoly <- function (data3, gwasModel, snpModels, traits, data4) {
+	msg();msg("Running GWASpoly...");msg()
+
 	if (!is.null (data4)) { msg (">>>> Loading GWASpoly..."); return (data4) }
 
 	msg (">>>> Running ", gwasModel, "GWAS...")
 
 	#snpModels = c("general","additive","1-dom", "2-dom")
-	if (gwasModel %in% c("Naive","Kinship")) {
+ 	if (gwasModel %in% c("Naive","Kinship")) {
 		msg (">>>> Without params")
-		data4 = GWASpoly(data3, models=snpModels, traits=testTraits, params=NULL)
+		data4 = GWASpoly(data3, models=snpModels, traits=traits, params=NULL)
 	}else {
 		msg (">>>> With params")
-		data4 = GWASpoly(data3, models=snpModels, traits=testTraits, params=data3@params)
+		data4 = GWASpoly(data3, models=snpModels, traits=traits, params=data3@params)
 	}
 	
 	return (data4)
@@ -198,8 +224,8 @@ runGwaspoly <- function (data3, gwasModel, snpModels, testTraits, data4) {
 #-------------------------------------------------------------
 # Plot results
 #-------------------------------------------------------------
-showResults <- function (data4, testModels, testTraits, gwasModel, phenotypeFile) {
-	msg();msg ("Plotting results...")
+showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile) {
+	msg();msg ("Plotting results...");msg()
 	phenoName = strsplit (phenotypeFile, split=".tbl")[[1]][1]
 	plotName = sprintf("plot-gwaspoly-qq-%s-%s.pdf", gwasModel, phenoName)
 
@@ -215,26 +241,32 @@ showResults <- function (data4, testModels, testTraits, gwasModel, phenotypeFile
 
 	# QQ-plot Output
 
-	pdf (file=plotName, width=11, height=7)
+	pdf (file=plotName, width=11, height=5)
 	#par(mfrow = c(2, 3),     # 2x2 layout
 	#	oma = c(2, 2, 0, 0), # two rows of text at the outer left and bottom margin
 	#	mar = c(1, 1, 0, 0), # space for one row of text at ticks and to separate plots
 	#	mgp = c(2, 1, 0),    # axis label at 2 rows distance, tick labels at 1 row
 	#	xpd = F)            # allow content to protrude into outer margin (and beyond)
+	op <- par(mfrow = c(2,6),
+          oma = c(0,4,0,2) + 0.1,
+          mar = c(0,3,1.5,1) + 0.1,
+		  mgp = c(1.8,0.6,0)+0.1)
 	
-	par(mfrow=c(2,6), mgp=c(2,0.7,0), oma=c(0,0,0,2), mar=c(0,4,1.5,0), xpd=F)
+	#par(mfrow=c(2,6), mgp=c(2,0.7,0), oma=c(0,0,0,2), mar=c(0,4,1.5,0), xpd=F)
+	
 	for (i in 1:length(testModels)) {
 		#par (cex.main=0.5, cex.lab=0.5, cex.axis=0.5, ann=T)
-		qq.plot(data4,trait=testTraits [1], model=testModels[i], cex=0.3)
+		qq.plot(data4,trait=traits [1], model=testModels[i], cex=0.3)
 	}
 
 	# Manhattan plot Output
 	for (i in 1:length(testModels)) {
 		#par (cex=1.5)
-		manhattan.plot (y.max=20,data5, trait=testTraits[1], model=testModels [i])
+		manhattan.plot (y.max=20,data5, trait=traits[1], model=testModels [i])
 	}
 	plotTitle = sprintf ("%s with %s", gwasModel, phenoName)  
 	mtext(plotTitle, outer=T,  cex=1.5, line=-2)
+	par(op)
 	dev.off()
 
 	# Manhattan plot Output
@@ -251,13 +283,13 @@ showResults <- function (data4, testModels, testTraits, gwasModel, phenotypeFile
 #-------------------------------------------------------------
 # Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
 #-------------------------------------------------------------
-initGWAS <- function (phenotypeFile, genotypeFile, nTraits, data1) {
-	msg();msg ("Initializing GWAS...")
+initGWAS <- function (phenotypeFile, genotypeFile, data1) {
+	msg();msg ("Initializing GWAS...");msg()
 	# When data is previously loaded
 	if (!is.null (data)) {msg(">>>> Loading GWAS data..."); return (data)}
 
 	data1 = read.GWASpoly (ploidy = 4, pheno.file = phenotypeFile, geno.file = genotypeFile, 
-						  format = "numeric", n.traits = nTraits, delim=",")
+						  format = genotypeFormat, n.traits = 1, delim=",")
 
 	return (data1)
 }
