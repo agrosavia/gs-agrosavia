@@ -1,5 +1,5 @@
 #!/usr/bin/Rscript
-# r1.2: Functions + write to RData cache
+# r1.2: With basic parameters handling and best graphics
 # r0.1: Functions + write to RData cache
 
 USAGE="USAGE: gwas-pipeline-poly.R <phenotype> <genotype> [structure]"
