@@ -31,14 +31,49 @@ testModels           = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-al
 #genotypeFormati = "numeric"|"AB"|"ACGT"
 genotypeFormat = "AB"
 #gwasModel = "Naive"|"Structure"|"Kinship"|"PCs"
-gwasModel      = "PCs"
+gwasModel      = "Naive"
 #-------------------------------------------------------------
 data = data2 = data3 = data4 = NULL
 phenotype = genotype = structure = NULL
 
 main <- function (args) {
-	args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
-	args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl")
+	#args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
+	args = c ("phenotype-checked.tbl", "genotype-checked.tbl", "structure-checked.tbl")
+
+	# Read and check command line arguments
+	files = readCheckCommandLineArguments (args)
+
+	msg (">>>>>>>>>>>>", gwasModel, "<<<<<<<<<<<") 
+
+	# Load cache data
+	if (file.exists ("gwas.RData")) load (file="gwas.RData")
+
+	# Read and check matchs in files (phenotype and genotype) and write new files
+	data = readData (files$phenotype, files$genotype, files$structure)
+
+	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
+	data1 <- initGWAS (files$phenotype, files$genotype, data1)
+
+	# Set the kinship
+	data2 <- setKinship (data1, gwasModel, data2)
+
+	# Populations structure and kinship
+	data3 <- setPopulationStructure (data2, gwasModel, data$phenotype, 
+									data$structure, data3)
+
+	# GWAS execution
+	data4 <- runGwaspoly (data3, gwasModel, snpModels, data$traits, data4)
+
+	# Plot results
+	showResults (data4, testModels, data$traits, gwasModel, files$phenotype)
+
+	save(phenotype, genotype, structure, data, data1, data2, data3, data4, file="gwas.RData") 
+}
+#-------------------------------------------------------------
+# Read and check command line arguments
+# Currently: phenotye, genotype, structure
+#-------------------------------------------------------------
+readCheckCommandLineArguments <- function (args) {
 	if (length (args) == 3) {
 		phenotypeFile   <- args [1]
 		genotypeFile    <- args [2]
@@ -53,32 +88,10 @@ main <- function (args) {
 		quit ()
 	}
 
-	msg (">>>>>>>>>>>>", gwasModel, "<<<<<<<<<<<") 
+	return (list(phenotype=phenotypeFile, genotype=genotypeFile, structure=structureFile))
 
-	# Read and chheck matchs in files (samples, samples) and write new files
 
-	# Load cache data
-	if (file.exists ("gwas.RData")) load (file="gwas.RData")
 
-	data = readData (phenotypeFile, genotypeFile, structureFile)
-
-	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
-	data1 <- initGWAS (phenotypeFile, genotypeFile, data1)
-
-	# Set the kinship
-	data2 <- setKinship (data1, gwasModel, data2)
-
-	# Populations structure and kinship
-	data3 <- setPopulationStructure (data2, gwasModel, data$phenotype, 
-									data$structure, data3)
-
-	# GWAS execution
-	data4 <- runGwaspoly (data3, gwasModel, snpModels, data$traits, data4)
-
-	# Plot results
-	showResults (data4, testModels, data$traits, gwasModel, phenotypeFile)
-
-	save(phenotype, genotype, structure, data, data1, data2, data3, data4, file="gwas.RData") 
 }
 
 #-------------------------------------------------------------
@@ -248,15 +261,16 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile) {
 	#	mgp = c(2, 1, 0),    # axis label at 2 rows distance, tick labels at 1 row
 	#	xpd = F)            # allow content to protrude into outer margin (and beyond)
 	op <- par(mfrow = c(2,6),
-          oma = c(0,4,0,2) + 0.1,
+          oma = c(0,3,0,2) + 0.1,
           mar = c(0,3,1.5,1) + 0.1,
-		  mgp = c(1.8,0.6,0)+0.1)
+		  mgp = c(1.8,0.6,0)+0.1,
+		  cex.main=1)
 	
 	#par(mfrow=c(2,6), mgp=c(2,0.7,0), oma=c(0,0,0,2), mar=c(0,4,1.5,0), xpd=F)
 	
 	for (i in 1:length(testModels)) {
 		#par (cex.main=0.5, cex.lab=0.5, cex.axis=0.5, ann=T)
-		qq.plot(data4,trait=traits [1], model=testModels[i], cex=0.3)
+		qqPlot(data4,trait=traits [1], model=testModels[i], cex=0.3)
 	}
 
 	# Manhattan plot Output
@@ -280,6 +294,47 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile) {
 	 #  }
 	#dev.off ()
 }
+#-------------------------------------------------------------
+# QQ plot
+#-------------------------------------------------------------
+inflationFactor <- function (scores){
+	pvalues = 10^-scores
+	chisq <- na.omit (qchisq(1-pvalues,1))
+	delta  = round (median(chisq)/qchisq(0.5,1), 3)
+
+	return (delta)
+}
+
+qqPlot <- function(data,trait,model,cex=1,filename=NULL) {
+	stopifnot(inherits(data,"GWASpoly.fitted"))
+	traits <- names(data@scores)
+	stopifnot(is.element(trait,traits))
+	models <- colnames(data@scores[[trait]])
+	stopifnot(is.element(model,models))
+	scores <- data@scores[[trait]][,model]
+	remove <- which(is.na(scores))
+	if (length(remove)>0) {
+		x <- sort(scores[-remove],decreasing=TRUE)
+	} else {
+		x <- sort(scores,decreasing=TRUE)
+	}
+	n <- length(x)
+	ifactor = inflationFactor (x)
+	unif.p <- -log10(ppoints(n))
+	if (!is.null(filename)) {postscript(file=filename,horizontal=FALSE)}
+	par(pty="s")
+	plot(unif.p,x,pch=16,cex=cex,
+		 xlab=expression(paste("Expected -log"[10],"(p)",sep="")),
+		 ylab=expression(paste("Observed -log"[10],"(p)",sep="")),
+		 main=paste(trait," (",model,") ",sep=""))
+
+	mtext (bquote(lambda[GC] == .(ifactor)), side=3, line=-2, cex=0.7)
+
+	lines(c(0,max(unif.p)),c(0,max(unif.p)),lty=2)
+	if (!is.null(filename)) {dev.off()}
+	return(NULL)
+}
+
 #-------------------------------------------------------------
 # Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
 #-------------------------------------------------------------
