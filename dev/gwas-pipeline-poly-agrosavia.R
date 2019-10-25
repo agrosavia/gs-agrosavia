@@ -1,4 +1,5 @@
 #!/usr/bin/Rscript
+# r2.0: Support for multiple command line arguments (default only)
 # r1.5: Added SNPs annotations from Ship
 # r1.4: Working with data from agrosavia, with improved graphics
 # r1.2: With basic parameters handling and best graphics
@@ -14,17 +15,16 @@ setClass ("GWASpolyStruct", slots=c(params="list"), contains="GWASpoly.K")
 options (width=300)
 
 #gwasModelsTypes = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
-#snpModels       = c("general","additive","1-dom", "2-dom")
-#testModels      = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
+snpModels       = c("general","additive","1-dom", "2-dom")
+testModels      = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
 ##gwasModelsTypes = c("Kinship")
 ##snpModels       = c("general")
 ##testModels      = c("general")
 ##multipleTestingModel = "FDR"
 ##multipleTestingModel = "permute"
-#gwasModelsTypes = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
 multipleTestingModel = "Bonferroni" 
-snpModels            = c("general","additive","1-dom", "2-dom")
-testModels           = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
+#snpModels            = c("general","additive","1-dom")
+#testModels           = c("general", "additive","1-dom-alt","1-dom-ref")
 #snpModels            = c("general")
 #testModels           = c("general")
 #-------------------------------------------------------------
@@ -33,41 +33,44 @@ testModels           = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-al
 #genotypeFormati = "numeric"|"AB"|"ACGT"
 genotypeFormat = "numeric"
 #gwasModel = "Naive"|"Structure"|"Kinship"|"PCs"
-gwasModel      = "Kinship"
+#gwasModel      = "Kinship"
+PLOIDY         = 4
 #-------------------------------------------------------------
 data = data1 = data2 = data3 = data4 = NULL
 phenotype = genotype = structure = NULL
 
 main <- function (args) {
 	#args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
-	args = c ("phenotype-checked.tbl", "genotype-checked.tbl", "structure-checked.tbl", "snps-annotations.tbl")
+	args = c ("--pheno", "phenotype-checked.tbl", "--geno", "genotype-checked.tbl", 
+			  "--struct", "structure-checked.tbl", "--snps", "snps-annotations.tbl", "--model", "Naive")
+	#args = c ("phenotype-checked.tbl", "genotype-checked-diplo.tbl", "structure-checked.tbl", "snps-annotations.tbl")
 
 	# Read and check command line arguments
-	files = readCheckCommandLineArguments (args)
+	params = readCheckCommandLineArguments (args)
 
-	msg (">>>>>>>>>>>>", gwasModel, "<<<<<<<<<<<") 
+	msg (">>>>>>>>>>>>", params$gwasModel, "<<<<<<<<<<<") 
 
 	# Load cache data
 	if (file.exists ("gwas.RData")) load (file="gwas.RData")
 
-	# Read and check matchs in files (phenotype and genotype) and write new files
-	data = readData (files$phenotype, files$genotype, files$structure)
+	# Read and check matchs in params (phenotype and genotype) and write new params
+	data = readData (params$phenotypeFile, params$genotypeFile, params$structureFile)
 
 	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
-	data1 <- initGWAS (files$phenotype, files$genotype, data1)
+	data1 <- initGWAS (params$phenotypeFile, params$genotypeFile, data1)
 
 	# Set the kinship
-	data2 <- setKinship (data1, gwasModel, data2)
+	data2 <- setKinship (data1, params$gwasModel, data2)
 
 	# Populations structure and kinship
-	data3 <- setPopulationStructure (data2, gwasModel, data$phenotype, 
+	data3 <- setPopulationStructure (data2, params$gwasModel, data$phenotype, 
 									data$structure, data3)
 
 	# GWAS execution
-	data4 <- runGwaspoly (data3, gwasModel, snpModels, data$traits, data4)
+	data4 <- runGwaspoly (data3, params$gwasModel, snpModels, data$traits, data4)
 
 	# Plot results
-	showResults (data4, testModels, data$traits, gwasModel, files$phenotype, files$snpsAnnotations)
+	showResults (data4, testModels, data$traits, params$gwasModel, params$phenotypeFile, params$snpsFile)
 
 	save(data, data1, data2, data3, data4, file="gwas.RData") 
 }
@@ -77,29 +80,27 @@ main <- function (args) {
 #-------------------------------------------------------------
 readCheckCommandLineArguments <- function (args) {
 	msg();msg("Reading Files...")
-	if (length (args) < 2) {
-		message ("Error in the number of arguments")
-		message (USAGE)
-		quit ()
-	}else if (length (args) == 2) {
-		phenotypeFile   <- args [1]
-		genotypeFile    <- args [2]
-		structureFile   <- NULL
-		snpsFile        <- NULL
-	}else if (length (args) == 3) {
-		phenotypeFile   <- args [1]
-		genotypeFile    <- args [2]
-		structureFile   <- args [3] 
-		snpsFile        <- NULL
-	}else if (length (args) == 4) {
-		phenotypeFile   <- args [1]
-		genotypeFile    <- args [2]
-		structureFile   <- args [3] 
-		snpsFile        <- args [4]
-	}
-	msg (args)
-	return (list(phenotype=phenotypeFile, genotype=genotypeFile, structure=structureFile, snpsAnnotations=snpsFile))
 
+	i = match ("--pheno", args)
+	phenotypeFile = args [i+1]
+
+	i = match ("--geno", args)
+	genotypeFile = args [i+1]
+
+	i = match ("--struct", args)
+	structureFile = args [i+1]
+
+	i = match ("--snps", args)
+	snpsFile = args [i+1]
+
+	i = match ("--model", args)
+	gwasModel = args [i+1]
+
+	return (list(phenotypeFile=phenotypeFile, 
+				 genotypeFile=genotypeFile,
+				 structureFile=structureFile, 
+				 snpsFile=snpsFile,
+				 gwasModel=gwasModel))
 }
 
 #-------------------------------------------------------------
@@ -242,18 +243,20 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 
 	print (significativeQTLs)
 
-	# QQ-plot Output
 
-	pdf (file=plotName, width=11, height=5)
-	op <- par(mfrow = c(2,6),   # 2x2 layout
-          oma = c(0,3,0,2) + 0.1,   # zero rows of text at the outer left and bottom margin
-          mar = c(0,3,1.5,1) + 0.1, # space for three row of text at ticks and to separate plots
-		  mgp = c(1.8,0.6,0)+0.1,   # axis label at 1.8 rows distance, tick labels at 0.6 row
-		  #	xpd = F)            # allow content to protrude into outer margin (and beyond)
-		  cex.main=1)
+	pdf (file=plotName, width=11, height=7)
+	n = length (testModels)
+	#op <- par(mfrow = c(2,n),   # 2xn layout
+          #oma = c(0,3,0,2) + 0.1,   # zero rows of text at the outer left and bottom margin
+          #mar = c(0,3,1.5,1) + 0.1, # space for three row of text at ticks and to separate plots
+		  #mgp = c(1.8,0.6,0)+0.1,   # axis label at 1.8 rows distance, tick labels at 0.6 row
+		  #	xpd = F,            # allow content to protrude into outer margin (and beyond)
+		  #cex.main=1)
 	
 	#par(mfrow=c(2,6), mgp=c(2,0.7,0), oma=c(0,0,0,2), mar=c(0,4,1.5,0), xpd=F)
 	
+	# QQ-plot Output
+	op <- par(mfrow = c(2,n), oma=c(0,0,3,0))
 	for (i in 1:length(testModels)) {
 		#par (cex.main=0.5, cex.lab=0.5, cex.axis=0.5, ann=T)
 		qqPlot(data4,trait=traits [1], model=testModels[i], cex=0.3)
@@ -264,8 +267,8 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 		#par (cex=1.5)
 		manhattan.plot (y.max=20,data5, trait=traits[1], model=testModels [i])
 	}
-	plotTitle = sprintf ("%s with %s", gwasModel, traits[1])  
-	mtext(plotTitle, outer=T,  cex=1.5, line=-2)
+	plotTitle = sprintf ("GWAS %s-ploidy with %s for %s trait", PLOIDY, gwasModel, traits[1])  
+	mtext(plotTitle, outer=T,  cex=1.5,  line=0)
 	par(op)
 	dev.off()
 }
@@ -315,14 +318,6 @@ getQTL <- function(data,snpsAnnotationsFile, traits=NULL,models=NULL) {
 #-------------------------------------------------------------
 # QQ plot
 #-------------------------------------------------------------
-inflationFactor <- function (scores){
-	pvalues = 10^-scores
-	chisq <- na.omit (qchisq(1-pvalues,1))
-	delta  = round (median(chisq)/qchisq(0.5,1), 3)
-
-	return (delta)
-}
-
 qqPlot <- function(data,trait,model,cex=1,filename=NULL) {
 	stopifnot(inherits(data,"GWASpoly.fitted"))
 	traits <- names(data@scores)
@@ -354,6 +349,17 @@ qqPlot <- function(data,trait,model,cex=1,filename=NULL) {
 }
 
 #-------------------------------------------------------------
+# Calculate the inflation factor from -log10 values
+#-------------------------------------------------------------
+inflationFactor <- function (scores){
+	pvalues = 10^-scores
+	chisq <- na.omit (qchisq(1-pvalues,1))
+	delta  = round (median(chisq)/qchisq(0.5,1), 3)
+
+	return (delta)
+}
+
+#-------------------------------------------------------------
 # Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
 #-------------------------------------------------------------
 initGWAS <- function (phenotypeFile, genotypeFile, data1) {
@@ -361,7 +367,7 @@ initGWAS <- function (phenotypeFile, genotypeFile, data1) {
 	# When data is previously loaded
 	if (!is.null (data)) {msg(">>>> Loading GWAS data..."); return (data)}
 
-	data1 = read.GWASpoly (ploidy = 4, pheno.file = phenotypeFile, geno.file = genotypeFile, 
+	data1 = read.GWASpoly (ploidy = PLOIDY, pheno.file = phenotypeFile, geno.file = genotypeFile, 
 						  format = genotypeFormat, n.traits = 1, delim=",")
 
 	return (data1)
