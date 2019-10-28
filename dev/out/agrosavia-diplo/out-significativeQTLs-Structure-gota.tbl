@@ -1,0 +1,13 @@
+Trait	Model	Threshold	Marker	Chrom	Position	Ref	Alt	Score	Effect	Annotation	Best.Arabidopsis.Hit...Locus
+gota	general	4.79	solcap_snp_c2_36660	1	534626	0	1	5.62	NA	Circadian clock-associated FKF1	AT1G68050.1
+gota	general	4.79	solcap_snp_c2_3512	5	51477749	0	1	7.78	NA	Conserved gene of unknown function	AT3G04350.1
+gota	general	4.79	solcap_snp_c1_5112	7	43125095	0	1	5.1	NA	Phosphofructokinase	AT4G26270.1
+gota	general	4.79	solcap_snp_c2_12601	7	53106007	0	1	13.71	NA	3-hydroxybutyryl-CoA dehydrogenase	AT3G15290.1
+gota	general	4.79	solcap_snp_c2_49245	8	35651378	0	1	17.31	NA	UDP-sulfoquinovose synthase	AT4G33030.1
+gota	general	4.79	solcap_snp_c2_41463	8	35922019	0	1	17.31	NA	Conserved gene of unknown function	AT2G26110.1
+gota	additive	4.79	solcap_snp_c2_12601	7	53106007	0	1	6.76	-0.34	3-hydroxybutyryl-CoA dehydrogenase	AT3G15290.1
+gota	additive	4.79	solcap_snp_c2_49245	8	35651378	0	1	5.69	0.39	UDP-sulfoquinovose synthase	AT4G33030.1
+gota	additive	4.79	solcap_snp_c2_41463	8	35922019	0	1	5.68	0.39	Conserved gene of unknown function	AT2G26110.1
+gota	1-dom-alt	4.42	solcap_snp_c1_3484	4	71945107	0	1	4.85	-0.35	Cinnamoyl-CoA reductase	AT2G33590.1
+gota	1-dom-alt	4.42	solcap_snp_c2_10568	4	71954528	0	1	4.97	-0.36	3-hydroxy-3-methylglutaryl coenzyme A reductase	AT1G76490.1
+gota	1-dom-ref	4.53	solcap_snp_c1_7325	2	42764457	0	1	4.62	0.36	POM30	AT5G67500.1

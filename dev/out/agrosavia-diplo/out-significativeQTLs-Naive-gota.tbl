@@ -1,0 +1,8 @@
+Trait	Model	Threshold	Marker	Chrom	Position	Ref	Alt	Score	Effect	Annotation	Best.Arabidopsis.Hit...Locus
+gota	general	4.79	solcap_snp_c2_36660	1	534626	0	1	5.43	NA	Circadian clock-associated FKF1	AT1G68050.1
+gota	general	4.79	solcap_snp_c2_3512	5	51477749	0	1	7.95	NA	Conserved gene of unknown function	AT3G04350.1
+gota	general	4.79	solcap_snp_c1_5112	7	43125095	0	1	5.29	NA	Phosphofructokinase	AT4G26270.1
+gota	general	4.79	solcap_snp_c2_12601	7	53106007	0	1	14.17	NA	3-hydroxybutyryl-CoA dehydrogenase	AT3G15290.1
+gota	general	4.79	solcap_snp_c2_49245	8	35651378	0	1	17.45	NA	UDP-sulfoquinovose synthase	AT4G33030.1
+gota	general	4.79	solcap_snp_c2_41463	8	35922019	0	1	17.45	NA	Conserved gene of unknown function	AT2G26110.1
+gota	additive	4.79	solcap_snp_c2_12601	7	53106007	0	1	6.96	-0.33	3-hydroxybutyryl-CoA dehydrogenase	AT3G15290.1
