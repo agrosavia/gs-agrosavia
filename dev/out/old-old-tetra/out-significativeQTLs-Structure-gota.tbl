@@ -1,0 +1,26 @@
+Type	GC	Model	Threshold	Marker	Chrom	Position	Ref	Alt	Score	Effect	Annotation	Best.Arabidopsis.Hit...Locus
+Structure	0.563	general	4.72	solcap_snp_c1_12386	2	37411847	0	1	15.69	NA	Zinc finger protein	AT1G30970.1
+Structure	0.563	general	4.72	solcap_snp_c1_5895	2	48564909	0	1	12.59	NA	Acetyl-CoA synthetase	AT5G36880.2
+Structure	0.563	general	4.72	solcap_snp_c1_6869	3	41992129	0	1	6.07	NA	CDPK	AT1G12580.1
+Structure	0.563	general	4.72	solcap_snp_c1_526	3	46395963	0	1	7.49	NA	Pseudo response regulator	AT5G24470.1
+Structure	0.563	general	4.72	solcap_snp_c1_2838	4	7099150	0	1	6.37	NA	Actin-11	AT3G12110.1
+Structure	0.563	general	4.72	solcap_snp_c2_39448	4	63659421	0	1	5.75	NA	Actin-11	AT3G12110.1
+Structure	0.563	general	4.72	solcap_snp_c1_3393	5	47991663	0	1	5.14	NA	Conserved gene of unknown function	AT1G78230.1
+Structure	0.563	general	4.72	solcap_snp_c1_2838	5	50246724	0	1	6.37	NA	ATP binding protein	AT2G40070.1
+Structure	0.563	general	4.72	solcap_snp_c2_3512	5	51477749	0	1	6.51	NA	Conserved gene of unknown function	AT3G04350.1
+Structure	0.563	general	4.72	solcap_snp_c2_15929	7	43192596	0	1	19.15	NA	Conserved gene of unknown function	AT2G04280.1
+Structure	0.563	general	4.72	solcap_snp_c2_12404	7	52544646	0	1	6.68	NA	Conserved gene of unknown function	AT1G78810.1
+Structure	0.563	general	4.72	solcap_snp_c2_12601	7	53106007	0	1	12.25	NA	3-hydroxybutyryl-CoA dehydrogenase	AT3G15290.1
+Structure	0.563	general	4.72	solcap_snp_c2_49245	8	35651378	0	1	15.71	NA	UDP-sulfoquinovose synthase	AT4G33030.1
+Structure	0.563	general	4.72	solcap_snp_c2_41463	8	35922019	0	1	15.7	NA	Conserved gene of unknown function	AT2G26110.1
+Structure	0.563	general	4.72	solcap_snp_c1_821	8	37494529	0	1	6.73	NA	Conserved gene of unknown function	AT4G32820.1
+Structure	0.563	general	4.72	solcap_snp_c1_11246	11	4745919	0	1	7.99	NA	Seed maturation protein PM36	AT3G16990.1
+Structure	1.215	1-dom-alt	4.35	solcap_snp_c1_3484	4	71945107	0	1	4.85	-0.35	Cinnamoyl-CoA reductase	AT2G33590.1
+Structure	1.215	1-dom-alt	4.35	solcap_snp_c2_10568	4	71954528	0	1	4.97	-0.36	3-hydroxy-3-methylglutaryl coenzyme A reductase	AT1G76490.1
+Structure	1.301	1-dom-ref	4.44	solcap_snp_c1_7325	2	42764457	0	1	4.62	0.36	POM30	AT5G67500.1
+Structure	0.89	2-dom-alt	4.44	solcap_snp_c2_32854	5	10418984	0	1	5.22	0.34	Signal transducer	AT1G67900.1
+Structure	0.906	2-dom-ref	4.48	solcap_snp_c1_4454	5	32680860	0	1	4.73	0.33	Transmembrane protein	AT2G05755.1
+Structure	0.906	2-dom-ref	4.48	solcap_snp_c2_24064	6	54713088	0	1	4.85	-0.29	Bell-like homeodomain protein 2	No_Hit
+Structure	0.906	2-dom-ref	4.48	solcap_snp_c1_10855	7	9998099	0	1	4.94	0.32	DNA repair protein RAD51 homolog	AT5G20850.1
+Structure	0.906	2-dom-ref	4.48	solcap_snp_c2_49836	7	10161576	0	1	5.03	-0.34	Pectinesterase	AT4G33220.1
+Structure	0.906	2-dom-ref	4.48	solcap_snp_c2_48128	10	55968047	0	1	5.41	0.34	Retinoblastoma-binding protein	AT5G47430.1

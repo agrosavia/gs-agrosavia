@@ -42,8 +42,8 @@ phenotype = genotype = structure = NULL
 
 main <- function (args) {
 	#args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
-	#args = c ("--pheno", "phenotype.tbl", "--geno", "genotype.tbl", 
-	#		  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Naive")
+	args = c ("--pheno", "phenotype.tbl", "--geno", "genotype-500.tbl", 
+			  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Naive")
 	#args = c ("phenotype-checked.tbl", "genotype-checked-diplo.tbl", "structure-checked.tbl", "snps-annotations.tbl")
 
 	# Read and check command line arguments
