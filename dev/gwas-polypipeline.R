@@ -46,8 +46,8 @@ main <- function (args)
 {
 	#args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
 	#args = c ("phenotype-checked.tbl", "genotype-checked-diplo.tbl", "structure-checked.tbl", "snps-annotations.tbl")
-	#args = c ("--pheno", "phenotype.tbl", "--geno", "genotype.tbl", 
-	#		  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Kinship+Structure")
+	args = c ("--pheno", "fenotipo-GE-norm.tbl", "--geno", "genotype.tbl", 
+			  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Kinship+Structure")
 
 	# Read and check command line arguments
 	params = readCheckCommandLineArguments (args)
