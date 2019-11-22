@@ -19,10 +19,6 @@ options (width=300)
 
 #gwasModelsTypes = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
 #snpModels       = c("general","additive","1-dom", "2-dom")
-#testModels      = c("general", "additive","1-dom-alt","1-dom-ref","2-dom-alt","2-dom-ref")
-##gwasModelsTypes = c("Kinship")
-##snpModels       = c("general")
-##testModels      = c("general")
 ##multipleTestingModel = "FDR"
 ##multipleTestingModel = "permute"
 multipleTestingModel = "Bonferroni" 
@@ -35,7 +31,7 @@ multipleTestingModel = "Bonferroni"
 #-------------------------------------------------------------
 #genotypeFormati = "numeric"|"AB"|"ACGT"
 #genotypeFormat = "numeric"
-#gwasModel = "Naive"|"Structure"|"Kinship"|"Kinship+Structure"
+#gwasModel = "Naive"|"Structure"|"Kinship"|"Kinship+Structure|PCs"
 #gwasModel      = "Kinship"
 #PLOIDY         = 4
 #-------------------------------------------------------------
@@ -46,11 +42,15 @@ main <- function (args)
 {
 	#args = c ("phenotype-gwaspoly-tuber_shape.tbl", "genotype-TableS1.tbl", "structure-gwaspoly.tbl")
 	#args = c ("phenotype-checked.tbl", "genotype-checked-diplo.tbl", "structure-checked.tbl", "snps-annotations.tbl")
-	args = c ("--pheno", "fenotipo-GE-norm.tbl", "--geno", "genotype.tbl", 
-			  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Kinship+Structure")
+	#args = c ("--pheno", "fenotipo-GE-norm.tbl", "--geno", "genotype.tbl", 
+	#		  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Kinship+Structure")
+	args  = c("--pheno",  "phenotype-Enciso-LBlight-2014-renamed.tbl", 
+			  "--geno", "genotype-Enciso-gwaspoly-renamed.tbl", 
+			  "--snps", "snps-annotations-renamed.tbl",
+			  "--model", "Naive")
 
 	# Read and check command line arguments
-	params = readCheckCommandLineArguments (args)
+	params <<- readCheckCommandLineArguments (args)
 
 	msg (">>>>>>>>>>>>", params$gwasModel, "<<<<<<<<<<<") 
 
@@ -103,8 +103,8 @@ readCheckCommandLineArguments <- function (args)
 	else params = append (params, list(structureFile = args [i+1]))
 
 	i = match ("--snps", args)
-	if (is.na (i)) snpsFile = NULL
-	else params = append (params, list(snpsFile = args [i+1]))
+	if (is.na (i)) snpsFile = NULL else snpsFile = args [i+1]
+	params = append (params, list(snpsFile = snpsFile))
 
 	i = match ("--model", args)
 	if (is.na (i)) params = append (params, list(gwasModel = "Naive"))
@@ -220,7 +220,7 @@ setKinship <- function (data1,  gwasModel, data2)
 	if (!is.null (data2)) {msg ("Loading kinship..."); return (data2) }
 
 	#kinshipMatrix = NULL
-	if (gwasModel %in% c("Kinship", "Kinship+Structure")) {
+	if (gwasModel %in% c("Kinship", "Kinship+Structure", "Kinship+PCs")) {
 		msg (">>>> With default kinship... ")
 		kinshipMatrix = NULL
 	}else { 
@@ -245,8 +245,8 @@ setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data
 	nPCs=0
 	structNames = structTypes = NULL
 
-	if (gwasModel %in% "PCs") {
-		nPCs=20
+	if (gwasModel %in% c("PCs","Kinship+PCs")) {
+		nPCs=5
 		msg (">>>> With nPCS=", nPCs, "...")
 	}else if (gwasModel %in% c("Structure", "Kinship+Structure")) {
 		msg (">>>> With population structure...")
@@ -287,7 +287,7 @@ runGwaspoly <- function (data3, gwasModel, snpModels, traits, data4)
 #-------------------------------------------------------------
 # Plot results
 #-------------------------------------------------------------
-showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, snpsAnnotationsFile, ploidy) 
+showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, snpsAnnFile, ploidy) 
 {
 	msg();msg ("Plotting results...");msg()
 	phenoName = strsplit (phenotypeFile, split=".tbl")[[1]][1]
@@ -314,7 +314,7 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 	# QTL Detection
 	data5 = set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
 	#significativeQTLs = get.QTL (data5)
-	significativeQTLs = getQTL (data5, snpsAnnotationsFile, gwasModel, ploidy)
+	significativeQTLs = getQTL (data5, snpsAnnFile, gwasModel, ploidy)
 
 	msg (">>>>", "Writing results...")
 	outFile = sprintf ("out-significativeQTLs-%s-%s.tbl", gwasModel, traits[1]) 
@@ -338,7 +338,7 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 #-------------------------------------------------------------
 # Extracts significant QTL
 #-------------------------------------------------------------
-getQTL <- function(data,snpsAnnotationsFile, gwasModel, ploidy, traits=NULL,models=NULL) 
+getQTL <- function(data,snpsAnnFile, gwasModel, ploidy, traits=NULL,models=NULL) 
 {
 	dat <<- data
 	stopifnot(inherits(data,"GWASpoly.thresh"))
@@ -353,7 +353,8 @@ getQTL <- function(data,snpsAnnotationsFile, gwasModel, ploidy, traits=NULL,mode
 		stopifnot(is.element(models,colnames(data@scores[[1]])))
 	}
 
-	snpsAnnotations <<- read.csv (file=snpsAnnotationsFile, header=T)
+	msg ("Reading associations...")
+	snpsAnnotations <<- read.csv (file=snpsAnnFile, header=T)
 
 	n.model <- length(models)
 	n.trait <- length(traits)
@@ -361,12 +362,17 @@ getQTL <- function(data,snpsAnnotationsFile, gwasModel, ploidy, traits=NULL,mode
 	for (j in 1:n.model) {
 		ix <- which(data@scores[[traits[1]]][,models[j]] > data@threshold[traits[1],models[j]])
 		markers <-  data.frame (SNP=data@map[ix,c("Marker")])
+		print (markers)
 		snpAnn  <- merge (markers, snpsAnnotations, by.x="SNP",by.y="SNP_id", sort=F)[,c(2,7)]
+		print (snpAnn)
 
 		scores <- data@scores[[1]][,models[j]]
 		datax = calculateInflationFactor (scores)
 
 		n.ix <- length(ix)
+		print(n.ix)
+		print(ploidy)
+		print(gwasModel)
 		
 		df = data.frame(Ploidy=rep (ploidy, n.ix),
 						Type=rep (gwasModel, n.ix),
@@ -376,8 +382,8 @@ getQTL <- function(data,snpsAnnotationsFile, gwasModel, ploidy, traits=NULL,mode
 					    Threshold=round(rep(data@threshold[traits[1],models[j]],n.ix),2),
 						Effect=round(data@effects[[traits[1]]][ix,models[j]],2),
 						data@map[ix,],
-						snpAnn, 
-						stringsAsFactors=F,check.names=F)
+						snpAnn) 
+						#stringsAsFactors=F,check.names=F)
 
 		output <- rbind(output, df)
 	}

@@ -1,0 +1,24 @@
+Ploidy	Type	GC	Model	Score	Threshold	Effect	Marker	Chrom	Position	Ref	Alt	Annotation	Best.Arabidopsis.Hit...Locus
+4	Kinship+Structure	1.176	1-dom-ref	5.11	4.44	-0.07	solcap_snp_c1_6748	4	64996975	0	1	Argininosuccinate lyase	AT5G10920.1
+4	Kinship+Structure	1.136	2-dom-alt	4.44	4.44	-0.06	solcap_snp_c2_29435	11	32948117	0	1	D-lactate dehydrogenase	AT5G06580.1
+4	Kinship+Structure	1.112	2-dom-ref	5.92	4.48	-0.08	solcap_snp_c2_20500	1	67211029	0	1	Utp-glucose-1-phosphate uridylyltransferase	AT3G03250.1
+4	Kinship+Structure	1.112	2-dom-ref	5.33	4.48	-0.07	solcap_snp_c2_3684	11	39911672	0	1	Neutral invertase	AT5G22510.1
+4	Kinship+Structure	1.112	2-dom-ref	5.18	4.48	0.06	solcap_snp_c1_5996	7	55209802	0	1	Fimbrin	AT5G55400.1
+4	Kinship+Structure	1.112	2-dom-ref	4.73	4.48	0.05	solcap_snp_c2_18855	12	51931824	0	1	Phospholipid-transporting ATPase	AT3G13900.1
+4	Kinship+Structure	1.112	2-dom-ref	4.66	4.48	0.05	solcap_snp_c2_40112	1	45757713	0	1	Phytochrome B	AT2G18790.1
+4	Kinship+Structure	0.526	general	48.75	4.72	NA	solcap_snp_c2_26802	4	9525557	0	1	Glycosyl transferase, family 8	AT5G47780.1
+4	Kinship+Structure	0.526	general	20.91	4.72	NA	solcap_snp_c1_9153	3	42943917	0	1	Metal ion binding protein	AT5G23760.1
+4	Kinship+Structure	0.526	general	20.04	4.72	NA	solcap_snp_c2_46998	6	6423713	0	1	Kinase	AT3G46290.1
+4	Kinship+Structure	0.526	general	12.97	4.72	NA	solcap_snp_c1_6643	11	5515254	0	1	Gene of unknown function	No_Hit
+4	Kinship+Structure	0.526	general	9.88	4.72	NA	solcap_snp_c2_39624	4	8060573	0	1	NtRab11D	AT5G65270.1
+4	Kinship+Structure	0.526	general	9.64	4.72	NA	solcap_snp_c2_29435	11	32948117	0	1	D-lactate dehydrogenase	AT5G06580.1
+4	Kinship+Structure	0.526	general	9.06	4.72	NA	solcap_snp_c2_36577	1	84401586	0	1	Gene of unknown function	AT2G15570.1
+4	Kinship+Structure	0.526	general	7.02	4.72	NA	solcap_snp_c2_3320	9	198497	0	1	Catalytic	AT5G01260.2
+4	Kinship+Structure	0.526	general	6.63	4.72	NA	solcap_snp_c2_43348	2	44773405	0	1	BIPINNATA	AT4G36870.1
+4	Kinship+Structure	0.526	general	6.48	4.72	NA	solcap_snp_c2_38872	7	797478	0	1	Gene of unknown function	No_Hit
+4	Kinship+Structure	0.526	general	6.33	4.72	NA	solcap_snp_c2_29025	8	399666	0	1	Exosome complex exonuclease rrp42	AT3G07750.1
+4	Kinship+Structure	0.526	general	5.76	4.72	NA	solcap_snp_c2_38556	4	66415083	0	1	Conserved gene of unknown function	AT4G27290.1
+4	Kinship+Structure	0.526	general	5.72	4.72	NA	solcap_snp_c2_31403	4	10567963	0	1	F-box family protein	AT5G63520.1
+4	Kinship+Structure	0.526	general	5.36	4.72	NA	solcap_snp_c1_11670	4	63515949	0	1	Cryptochrome 1	AT4G08920.1
+4	Kinship+Structure	0.526	general	5.33	4.72	NA	solcap_snp_c1_11525	7	769203	0	1	Gene of unknown function	No_Hit
+4	Kinship+Structure	0.526	general	5.12	4.72	NA	solcap_snp_c2_18662	7	55213230	0	1	Fimbrin	AT4G26700.1
