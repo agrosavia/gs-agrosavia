@@ -1,5 +1,4 @@
 #!/usr/bin/Rscript
-# r2.3: Removed annotations as it fails. Before config by file instead parameters
 # r2.2: Write model type and inflation factor to significative QTLs
 # r2.1: Support for multiple command line arguments (dynamic)
 
@@ -36,17 +35,6 @@ phenotype = genotype = structure = NULL
 
 main <- function (args) 
 {
-	#args = c ("--pheno", "fenotipo-GE-norm.tbl", "--geno", "genotype.tbl", 
-	#		  "--struct", "structure.tbl", "--snps", "snps-annotations.tbl", "--model", "Kinship+Structure")
-
-	# Plink filtered diplo
-	#args  = c("--pheno", "pheno-gwasp.tbl", "--geno", "geno-gwasp.tbl",
-	#		  "--model", "Naive", "--format", "ACGT", "--ploidy", "2")
-
-	# Plink filtered tetra
-	args  = c("--geno", "agrosavia-FLT-genotype-tetra-NUM.tbl", "--pheno", "agrosavia-FLT-phenotype.tbl", "--struct", "agrosavia-FLT-structure.tbl",
-			  "--model", "Kinship+Structure", "--format", "numeric", "--ploidy", "4", "--snps","snps-annotations.tbl")
-
 	# Read and check command line arguments
 	params <<- readCheckCommandLineArguments (args)
 
@@ -56,10 +44,10 @@ main <- function (args)
 	#if (file.exists ("gwas.RData")) load (file="gwas.RData")
 
 	# Read and check matchs in params (phenotype and genotype) and write new params
-	data = readCheckFiles (params$phenotypeFile, params$genotypeFile, params$structureFile)
+	data <- readCheckFiles (params$phenotypeFile, params$genotypeFile, params$structureFile)
 
 	# Read input genotype and genotype (format: "numeric", "AB", or "ACGT")
-	data1 <- initGWAS (params$phenotypeFile, params$genotypeFile,
+	data1 <<- initGWAS (params$phenotypeFile, params$genotypeFile,
 					   params$ploidy, params$format, data1)
 
 	# Set the kinship
@@ -77,7 +65,7 @@ main <- function (args)
 	# Plot results
 	if (params$ploidy==4) ploidyLabel = "Tetra" else ploidyLabel = "Diplo"
 	showResults (data4, params$testModels, data$trait, params$gwasModel, 
-				 params$phenotypeFile, params$snpsFile, ploidyLabel)
+				 params$phenotypeFile, params$annotationsFile, ploidyLabel)
 
 }
 #-------------------------------------------------------------
@@ -86,8 +74,23 @@ main <- function (args)
 #-------------------------------------------------------------
 readCheckCommandLineArguments <- function (args) 
 {
-	msg();msg("Reading Files...")
+	msg("Reading Files...")
 	params = list()
+
+	i = match ("--config", args)
+
+	if (is.na (i)) configFile = NULL
+	else { 
+		configFile = args [i+1]
+		msg ("Reading parameters from config file: ", configFile, "...")
+		source (configFile);
+		for (i in ls()) 
+			params = append (params, get(i))
+
+		names (params) = ls()
+		return(params)
+	}
+	msg ("Reading parameters from command line arguments...")
 
 	i = match ("--pheno", args)
 	if (is.na (i)) stop ("No phenotype file", call.=F)
@@ -102,8 +105,8 @@ readCheckCommandLineArguments <- function (args)
 	else params = append (params, list(structureFile = args [i+1]))
 
 	i = match ("--snps", args)
-	if (is.na (i)) snpsFile = NULL else snpsFile = args [i+1]
-	params = append (params, list(snpsFile = snpsFile))
+	if (is.na (i)) annotationsFile = NULL else annotationsFile = args [i+1]
+	params = append (params, list(annotationsFile = annotationsFile))
 
 	i = match ("--model", args)
 	if (is.na (i)) params = append (params, list(gwasModel = "Naive"))
@@ -111,11 +114,11 @@ readCheckCommandLineArguments <- function (args)
 
 	i = match ("--format", args)
 	if (is.na (i)) params = append (params, list(format = "numeric"))
-	else params = append (params, list(format = args [i+1]))
+	else params = append (params, list(genotypeFormat = args [i+1]))
 
 	i = match ("--ploidy", args)
 	if (is.na (i)) params = append (params, list(ploidy = 4))
-	else params = append (params, list(ploidy = as.integer (args [i+1])))
+	else params = append (params, list(genotypePloidy = as.integer (args [i+1])))
 
 	i = match ("--kinship", args)
 	if (is.na (i)) params = append (params, list(kinship = "NULL"))
@@ -140,10 +143,10 @@ readCheckCommandLineArguments <- function (args)
 	msg ("Phenotype filename : ", params$phenotypeFile) 
 	msg ("Genotype filename  : ", params$genotypeFile) 
 	msg ("Structure filename : ", params$structureFile) 
-	msg ("SNPs filename      : ", params$snpsFile) 
+	msg ("SNPs filename      : ", params$annotationsFile) 
 	msg ("GwAS model         : ", params$gwasModel) 
-	msg ("Genotype format    : ", params$format) 
-	msg ("Genotype ploidy    : ", params$ploidy) 
+	msg ("Genotype format    : ", params$genotypeFormat) 
+	msg ("Genotype ploidy    : ", params$genotypePloidy)
 	msg ("Kinship            : ", params$kinship) 
 	message ("------------------------------------------------")
 
@@ -182,19 +185,20 @@ readData <- function (phenotypeFile, genotypeFile, structureFile)
 readCheckFiles <- function (phenotypeFile, genotypeFile, structureFile) 
 {
 	msg();msg ("Reading and checking files (same samples for pheno, geno, and struct)...");msg()
-	phenotypeAll = read.csv (phenotypeFile, header=T, sep=",")
-	genotypeAll  = read.csv (genotypeFile, header=T, sep=",")
+	phenotypeAll <<- read.csv (phenotypeFile, header=T, sep=",", check.names=F)
+	genotypeAll  = read.csv (genotypeFile, header=T, sep=",", check.names=F)
 
-	if (is.null (structureFile)) structureAll = NULL 
-	else structureAll = read.csv (structureFile, header=T)
+	if (is.null (structureFile)) structureAll <<- NULL 
+	else structureAll <<- read.csv (structureFile, header=T,check.names=F)
 
-	samplesPheno  = phenotypeAll[,1]
-	samplesGeno   = colnames (genotypeAll)
+
+	samplesPheno  <<- phenotypeAll[,1]
+	samplesGeno   <<- colnames (genotypeAll)
 	#samplesStruct = structureAll$sample
 
-	commonMarkers = Reduce (intersect, list (samplesGeno, samplesPheno)) #, samplesStruct)
+	commonMarkers <<- Reduce (intersect, list (samplesGeno, samplesPheno)) #, samplesStruct)
 
-	phenotype  = phenotypeAll [phenotypeAll$sample %in% commonMarkers,]
+	phenotype  <<- phenotypeAll [phenotypeAll$Samples %in% commonMarkers,]
 	genoColums = c("Markers","Chrom","Position", commonMarkers)
 	genotype   = genotypeAll  [,colnames(genotypeAll) %in% genoColums]
 	#structure  = structureAll [structureAll[,1] %in% commonMarkers,]
@@ -237,9 +241,10 @@ setKinship <- function (data1,  gwasModel, data2)
 #-------------------------------------------------------------
 setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data3) 
 {
+	st <<- structure
 	msg();msg ("Setting population structure...");msg()
 	#setClass ("GWASpolyStruct", slots=c(params="list"), contains="GWASpoly.K")
-	data3 = new ("GWASpolyStruct", data2)
+	data3 <- new ("GWASpolyStruct", data2)
 	
 	nPCs=0
 	structNames = structTypes = NULL
@@ -249,13 +254,13 @@ setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data
 		msg (">>>> With nPCS=", nPCs, "...")
 	}else if (gwasModel %in% c("Structure", "Kinship+Structure")) {
 		msg (">>>> With population structure...")
-		structNames = colnames (structure[-1])
-		structTypes = rep ("numeric", length (structNames))
+		structNames <<- colnames (structure[-1])
+		structTypes <<- rep ("numeric", length (structNames))
 
 		#data3@pheno = phenoStruct
 		data3@pheno = phenotype
-		data3@fixed <<- structure [,-1]
-		quit()
+		data3@fixed = st[,-1]
+		print (data3@fixed)
 	}else 
 		msg (">>>> Without populations structure")
 
@@ -312,7 +317,7 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 	}
 
 	# QTL Detection
-	data5 = set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
+	data5 <<- set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
 	#significativeQTLs = get.QTL (data5)
 	significativeQTLs = getQTL (data5, snpsAnnFile, gwasModel, ploidyLabel)
 
@@ -321,7 +326,6 @@ showResults <- function (data4, testModels, traits, gwasModel, phenotypeFile, sn
 	write.table (file=outFile, significativeQTLs, quote=F, sep="\t", row.names=F)
 
 	print (significativeQTLs)
-
 
 	# Manhattan plot Output
 	for (i in 1:length(testModels)) {
