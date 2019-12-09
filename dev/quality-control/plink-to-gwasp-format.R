@@ -12,33 +12,35 @@ args = commandArgs(trailingOnly=T)
 #----------------------------------------------------------
 joinAlleles <- function (alleles) {
 	nCols = ncol (alleles)
-	mat = matrix (nrow = nrow (alleles), ncol=nCols/2)
+	matAGs = matrix (nrow = nrow (alleles), ncol=nCols/2)
+	matGAs = matrix (nrow = nrow (alleles), ncol=nCols/2)
 	j = 0
 	for (i in seq(1,nCols,2)){
 		j=j+1
- 		mat [,j] = cbind (paste0 (alleles [,i], alleles [,i+1]))
+ 		matAGs [,j] = cbind (paste0 (alleles [,i], alleles [,i+1]))
+ 		matGAs [,j] = cbind (paste0 (alleles [,i+1],"\t", alleles [,i]))
 	}
-	return (mat)
+	return (list(matAGs=matAGs, matGAs=matGAs))
 }
 
 #----------------------------------------------------------
 # Create gwaspoly genotype from plink  .ped and .map files
 #----------------------------------------------------------
-createGwaspolyGenotype <- function (plinkFile) {
-	pedFile   = paste0(plinkFile,".ped")
-	mapFile   = paste0(plinkFile,".map")
-
-	outName = paste0 (plinkFile, "-FLT-gwasp.tbl")
+createGwaspolyGenotype <- function (pedFile, mapFile) {
+	outName = paste0 (strsplit (pedFile, split="[.]")[[1]][1], "-FLT-gwasp.tbl")
 
 	# Process genotype
 	ped = read.table (pedFile, header=F,stringsAsFactors=F, colClasses=c("character"))
 	samples = ped [,2]
 	alleles = ped [,-c(1,2,3,4,5,6)]
-	allelesJoined = t(joinAlleles (alleles))
+	allelesJoined = joinAlleles (alleles)
+
+	allelesAGs = t(allelesJoined$matAGs)
 
 	map     = read.table (mapFile, header=F)
 	chrs    = map [,1]
 	markers = as.character (map [,2])
+	traits  = map [,3]
 	pos     = map [,4]
 
 	message (">>> PED files:")
@@ -47,17 +49,18 @@ createGwaspolyGenotype <- function (plinkFile) {
 	message ("\n>>> MAP file:")
 	print (map[1:10,])
 
-	#rownames (allelesJoined) = markers
-	colnames (allelesJoined) = samples
+	#rownames (allelesAGs) = markers
+	colnames (allelesAGs) = samples
 
-	genotype = cbind (Markers=markers,Chrom=chrs,Position=pos,allelesJoined)
+	genotype = cbind (Markers=markers,Chrom=chrs,Position=pos,allelesAGs)
 	gn = genotype 
-	#allelesDF = cbind (map [,c(1,2,3,4)], allelesJoined)
+	#allelesDF = cbind (map [,c(1,2,3,4)], allelesAGs)
 
 	message ("\n>>> Gwaspoly genotype file:")
 	print (genotype [1:10,1:10])
 	write.table (file=outName, genotype, row.names=F,quote=F, sep=",")
-	return (list(samples=as.numeric(samples), markers=markers))
+
+	return (list(samples=as.numeric(samples), markers=markers, alleles=allelesJoined$matGAs, traits=traits))
 }
 
 #----------------------------------------------------------
@@ -65,18 +68,20 @@ createGwaspolyGenotype <- function (plinkFile) {
 createGwaspolyPhenotype <- function (phenoFile, sampleNames) {
 	phenoGwaspFile = gsub (".tbl", "-FLT-gwasp.tbl", phenoFile)
 
-	pheno      <<- read.table (phenoFile, header=T)
+	pheno      <- read.table (phenoFile, header=T)
 	#phTmp   <<-  pheno %>% filter (sampleNames %in% IID)
 	#phenoDF = pheno %>% arrange (sampleNames %in% IID) %>% as.data.frame()
 	#pheno %>% filter (sampleNames %in% IID)
 
 	phenoDF = pheno %>% filter (IID %in% sampleNames) %>% arrange (match (IID, sampleNames)) %>% data.frame()
 
-	phenoGwasp <<- cbind (Samples=phenoDF[,2],BLIGHT=phenoDF[,3])
+	phenoGwasp <- cbind (Samples=phenoDF[,2],BLIGHT=phenoDF[,3])
 
 	message ("\n>>> Gwaspoly penotype file:")
 	print (head (phenoGwasp))
 	write.table (file=phenoGwaspFile, phenoGwasp, row.names=F,quote=F,sep=",")
+
+	return (phenoDF[,3])
 
 }
 
@@ -95,29 +100,62 @@ filterTetraGwaspolyWithPlinkGeno <- function (gwaspGenoTetraFile, samples, marke
 }
 
 #----------------------------------------------------------
+#----------------------------------------------------------
+filterStructureGwaspoly <- function  (structFile) {
+	struct = read.csv (file=structFile, header=T, check.names=F)
+
+	structDF = struct %>% filter (Samples %in% samples) %>% arrange (match (Samples, samples)) %>% data.frame (check.names=F)
+	outName = gsub (".tbl", "-FLT.tbl", structFile)
+	write.csv (file=outName, structDF, quote=F,row.names=F)
+}
+
+
+#----------------------------------------------------------
 # Main
 #----------------------------------------------------------
-args = c("geno-6", "pheno.tbl", "agrosavia-genotype-tetra-NUM.tbl", "agrosavia-structure.tbl")
+args = c("geno-6.ped", "geno-6.map", "pheno.tbl", "agrosavia-genotype-tetra-NUM.tbl", "agrosavia-structure.tbl")
 
-plinkFile  = args [1]
-phenoFile  = args [2]
-gwaspGenoTetraFile = args [3]
-structFile = args [4]
+plinkPEDFile  = args [1]
+plinkMAPFile  = args [2]
+phenoFile  = args [3]
+gwaspGenoTetraFile = args [4]
+structFile = args [5]
 
 
-genotype = createGwaspolyGenotype (plinkFile)
-samples = genotype$samples
-markers = genotype$markers
-
-createGwaspolyPhenotype (phenoFile, genotype$samples)
-
+genotype = createGwaspolyGenotype (plinkPEDFile, plinkMAPFile)
+samples  = genotype$samples
+markers  = genotype$markers
+alleles  = genotype$alleles
+traits   = genotype$traits
+#
+traits = createGwaspolyPhenotype (phenoFile, genotype$samples)
+#
 filterTetraGwaspolyWithPlinkGeno (gwaspGenoTetraFile, samples, markers)
+#
+filterStructureGwaspoly (structFile)
 
-struct = read.csv (file=structFile, header=T, check.names=F)
+##genoFile  = "agrosavia-genotype-FLT-plink.ped"
+##phenoFile = "agrosavia-phenotype-FLT.plink"
+##
+##geno  = read.table (file=genoFile, header=F,colClasses= c("character"))
+##pheno = read.table (file=phenoFile, header=T)
+##
+##ng = cbind (IID=paste0("A",pheno$IID), BLIGHT=pheno$BLIGHT, geno [,-c(1,2,3,4,5,6)])
+##outName = paste0 (strsplit (genoFile, split="-FLT-")[[1]][1], "-FLT-shesis.tbl")
+##write.table (file=outName, ng, row.names=F, col.names=F, quote=F, sep="\t")
+##
+##snpsNames  = geno [,-c(1,2,3,4,5,6)]
+##outName = paste0 (strsplit (genoFile, split="-FLT-")[[1]][1], "-FLT-shesis-names.txt")
+##write.csv (file=outName, snpsNames, row.names=F, quote=F)
 
-structDF = struct %>% filter (Samples %in% samples) %>% arrange (match (Samples, samples)) %>% data.frame (check.names=F)
-outName = gsub (".tbl", "-FLT.tbl", structFile)
-write.csv (file=outName, structDF, quote=F,row.names=F)
 
+#---------------------
+outFile = paste0 (strsplit (plinkPEDFile, split="[.]")[[1]][1], "-FLT-shesis.tbl")
+genoShesis = cbind (paste0("A", samples),traits,alleles)
+write.table (file=outFile, genoShesis, row.names=F, col.names=F, quote=F, sep="\t")
 
+outFile       = paste0 (strsplit (plinkPEDFile, split="-FLT-")[[1]][1], "-FLT-shesis-names.txt")
+con = file (outFile)
+writeLines (markers, con)
+close (con)
 

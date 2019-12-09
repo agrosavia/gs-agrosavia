@@ -1,18 +1,21 @@
 #!/usr/bin/Rscript
+# r2.5: Generating two tables: bestN and significatives
 # r2.41: Changed to parameters by config file. Beginning changes...
 # r2.3: Removed annotations as it fails. Before config by file instead parameters
 # r2.2: Write model type and inflation factor to significative QTLs
-# r2.1: Support for multiple command line arguments (dynamic)
 
+N_QTLs = 20     # Max. Number of best significative QTLs to report
 args = commandArgs(trailingOnly = TRUE)
-args = c("agrosavia-configFile-filtered.config")
+args = c("configs/naive-4g.config")
+
 USAGE="USAGE: Rscript gwas-polypiline.R <config file>"
 if (length (args) != 1) {
 	message (USAGE)
 	quit()
 }
 
-library (GWASpoly) #
+library (GWASpoly)                  # For GWAS
+suppressMessages (library (dplyr))  # For data handing
 suppressMessages(library (config))  # For read config file
 
 setClass ("GWASpolyStruct", slots=c(params="list"),#testModels="character" snpModels="character", 
@@ -23,8 +26,6 @@ options (width=300)
 #gwasModelsTypes        = c("Naive", "Kinship", "Structure", "PCs", "Kinship+Structure", "Kinship+PCs", "Structure+PCs", "Kinship+Structure+PCs")
 #snpModels              = c("general","additive","1-dom", "2-dom")
 multipleTestingModel    = "Bonferroni" # Bonferroni | FDR | permute
-#snpModels              = c("general","additive","1-dom")
-#testModels             = c("general", "additive","1-dom-alt","1-dom-ref")
 #snpModels = testModels = c("general")
 #-------------------------------------------------------------
 # Global configs
@@ -49,7 +50,7 @@ main <- function (args)
 	msg (">>>>>>>>>>>>", params$gwasModel, "<<<<<<<<<<<") 
 
 	# Load cache data
-	#if (file.exists ("gwas.RData")) load (file="gwas.RData")
+	if (file.exists ("gwas.RData")) load (file="gwas.RData")
 
 	# Read and check matchs in params (phenotype and genotype) and write new params
 	data = readCheckFiles (params$phenotypeFile, params$genotypeFile, params$structureFile)
@@ -68,12 +69,12 @@ main <- function (args)
 	# GWAS execution
 	data4 <- runGwaspoly (data3, params$gwasModel, params$snpModels, data4)
 
-	#save(data, data1, data2, data3, data4, file="gwas.RData") 
+	save(data, data1, data2, data3, data4, file="gwas.RData") 
 
 	# Plot results
-	if (params$genotypePloidy==4) ploidyLabel = "Tetra" else ploidyLabel = "Diplo"
+	if (params$genotypePloidy==4) uploidyLabel = "Tetra" else ploidyLabel = "Diplo"
 	showResults (data4, params$testModels, data$trait, params$gwasModel, 
-				 params$phenotypeFile, params$annotationsFile, ploidyLabel)
+	             params$phenotypeFile, params$annotationsFile, params$genotypePloidy)
 
 }
 #-------------------------------------------------------------
@@ -227,11 +228,11 @@ runGwaspoly <- function (data3, gwasModel, snpModels, data4)
 #-------------------------------------------------------------
 # Plot results
 #-------------------------------------------------------------
-showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snpsAnnFile, ploidyLabel) 
+showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snpsAnnFile, ploidy) 
 {
 	msg();msg ("Plotting results...");msg()
 	phenoName = strsplit (phenotypeFile, split=".tbl")[[1]][1]
-	plotName = sprintf("out-Gwasp%s-%s-plots.pdf", ploidyLabel, gwasModel)
+	plotName = sprintf("out-gwasp%s-%s-plots.pdf", ploidy, gwasModel)
 
 	pdf (file=plotName, width=11, height=7)
 	n = length (testModels)
@@ -246,18 +247,20 @@ showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snp
 	# QTL Detection
 	data5 = set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
 	#significativeQTLs = get.QTL (data5)
-	significativeQTLs = getQTL (data5, snpsAnnFile, gwasModel, ploidyLabel)
+	QTLs = getQTL (data5, snpsAnnFile, gwasModel, ploidy)
 
 	msg (">>>>", "Writing results...")
-	outFile = sprintf ("out-Gwasp%s-%s-QTLs.tbl", ploidyLabel, gwasModel) 
-	write.table (file=outFile, significativeQTLs, quote=F, sep="\t", row.names=F)
+	outFile = sprintf ("out-gwasp%s-%s-QTLs-bestN.tbl", ploidy, gwasModel) 
+	write.table (file=outFile, QTLs$best, quote=F, sep="\t", row.names=F)
+	outFile = sprintf ("out-gwasp%s-%s-QTLs-significatives.tbl", ploidy, gwasModel) 
+	write.table (file=outFile, QTLs$significatives, quote=F, sep="\t", row.names=F)
 
 	# Manhattan plot Output
 	for (i in 1:length(testModels)) {
 		#par (cex=1.5)
 		manhattan.plot (y.max=20,data5, trait=trait, model=testModels [i])
 	}
-	plotTitle = sprintf ("GWAS %s-ploidy with %s for %s trait", ploidyLabel, gwasModel, trait)  
+	plotTitle = sprintf ("GWAS %s-ploidy with %s for %s trait", ploidy, gwasModel, trait)  
 	mtext(plotTitle, outer=T,  cex=1.5,  line=0)
 	par(op)
 	dev.off()
@@ -269,8 +272,6 @@ showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snp
 getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=NULL) 
 {
 	stopifnot(inherits(data,"GWASpoly.thresh"))
-	sc <<-data@scores
-	quit()
 
 	if (is.null(traits)) traits <- names(data@scores)
 	else stopifnot(is.element(traits,names(data@scores)))
@@ -282,12 +283,15 @@ getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=
 	if (!is.null (snpsAnnFile)) snpsAnnotations <- read.csv (file=snpsAnnFile, header=T)
 
 	n.model <- length(models)
-	n.trait <- length(traits)
 	output <- data.frame(NULL)
+	
+	TRAIT <<- traits [1]
+	sc <<-data@scores[[TRAIT]]
 	for (j in 1:n.model) {
-		ix <- which(data@scores[[traits[1]]][,models[j]] > data@threshold[traits[1],models[j]])
+		#ix <- which(data@scores[[TRAIT]][,models[j]] > data@threshold[TRAIT,models[j]])
+		ix <<- which (!is.na (data@scores[[TRAIT]][,models[j]])) 
+		mdl <<- data@scores[[TRAIT]][,models[j]] 
 		markers <-  data.frame (SNP=data@map[ix,c("Marker")])
-		print (markers)
 		if (!is.null (snpsAnnFile)) 
 			snpAnn  <- merge (markers, snpsAnnotations, by.x="SNP",by.y="SNP_id", sort=F)[,c(2,7)]
 		else
@@ -298,13 +302,11 @@ getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=
 
 		n.ix <- length(ix)
 		
-		df = data.frame(Ploidy=rep (ploidyLabel, n.ix),
-						Type=rep (gwasModel, n.ix),
-						GC=rep(datax$delta,n.ix), 
-					    Model=rep(models[j],n.ix),
-						Score=round(data@scores[[traits[1]]][ix,models[j]],2),
-					    Threshold=round(rep(data@threshold[traits[1],models[j]],n.ix),2),
-						Effect=round(data@effects[[traits[1]]][ix,models[j]],2),
+		df = data.frame(Ploidy=rep (ploidyLabel, n.ix), Type=rep (gwasModel, n.ix),
+						GC=rep(datax$delta,n.ix), Model=rep(models[j],n.ix),
+						Score=round(data@scores[[TRAIT]][ix,models[j]],2),
+					    Threshold=round(rep(data@threshold[TRAIT,models[j]],n.ix),2),
+						Effect=round(data@effects[[TRAIT]][ix,models[j]],2),
 						data@map[ix,])
 						#snpAnn) 
 						#stringsAsFactors=F,check.names=F)
@@ -312,8 +314,11 @@ getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=
 		output <- rbind(output, df)
 	}
 	#out <-cbind (Type=gwasModel, output)
-	output = output [order(-output$GC,-output$Score),]
-	return(output)
+	#output <<- output [order(-output$GC,-output$Score),]
+	output         = output %>% arrange (desc(Score)) %>% distinct (Marker, .keep_all=T) 
+	best           = output %>% head(N_QTLs)
+	significatives = output %>% filter (Score >=Threshold)
+	return(list(best=best, significatives=significatives))
 }
 #-------------------------------------------------------------
 # QQ plot
