@@ -6,7 +6,7 @@
 
 N_QTLs = 20     # Max. Number of best significative QTLs to report
 args = commandArgs(trailingOnly = TRUE)
-args = c("configs/naive-4g.config")
+args = c("naive-4g-ACGT.config")
 
 USAGE="USAGE: Rscript gwas-polypiline.R <config file>"
 if (length (args) != 1) {
@@ -123,10 +123,10 @@ readCheckFiles <- function (phenotypeFile, genotypeFile, structureFile)
 	msg();msg ("Reading and checking files (same samples for pheno, geno, and struct)...");msg()
 
 	phenotypeAll = read.csv (phenotypeFile, header=T, sep=",", check.names=F)
-	genotypeAll  = read.csv (genotypeFile, header=T, sep=",", check.names=F)
+	genotypeAll  <<- read.csv (genotypeFile, header=T, sep=",", check.names=F)
 
-	if (is.null (structureFile)) structureAll <<- NULL 
-	else structureAll <<- read.csv (structureFile, header=T,check.names=F)
+	if (is.null (structureFile)) structureAll <- NULL 
+	else structureAll <- read.csv (structureFile, header=T,check.names=F)
 
 
 	samplesPheno  = phenotypeAll[,1]
@@ -178,7 +178,7 @@ setKinship <- function (data1,  gwasModel, data2)
 #-------------------------------------------------------------
 setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data3) 
 {
-	st <<- structure
+	st <- structure
 	msg();msg ("Setting population structure...");msg()
 	#setClass ("GWASpolyStruct", slots=c(params="list"), contains="GWASpoly.K")
 	data3 <- new ("GWASpolyStruct", data2)
@@ -191,8 +191,8 @@ setPopulationStructure <- function (data2, gwasModel, phenotype, structure, data
 		msg (">>>> With nPCS=", nPCs, "...")
 	}else if (gwasModel %in% c("Structure", "Kinship+Structure")) {
 		msg (">>>> With population structure...")
-		structNames <<- colnames (structure[-1])
-		structTypes <<- rep ("numeric", length (structNames))
+		structNames <- colnames (structure[-1])
+		structTypes <- rep ("numeric", length (structNames))
 
 		#data3@pheno = phenoStruct
 		data3@pheno = phenotype
@@ -245,7 +245,7 @@ showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snp
 	}
 
 	# QTL Detection
-	data5 = set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
+	data5 <<- set.threshold (data4, method=multipleTestingModel,level=0.05,n.permute=100,n.core=3)
 	#significativeQTLs = get.QTL (data5)
 	QTLs = getQTL (data5, snpsAnnFile, gwasModel, ploidy)
 
@@ -272,6 +272,7 @@ showResults <- function (data4, testModels, trait, gwasModel, phenotypeFile, snp
 getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=NULL) 
 {
 	stopifnot(inherits(data,"GWASpoly.thresh"))
+	map <<-data@map
 
 	if (is.null(traits)) traits <- names(data@scores)
 	else stopifnot(is.element(traits,names(data@scores)))
@@ -285,12 +286,11 @@ getQTL <- function(data,snpsAnnFile, gwasModel, ploidyLabel, traits=NULL,models=
 	n.model <- length(models)
 	output <- data.frame(NULL)
 	
-	TRAIT <<- traits [1]
-	sc <<-data@scores[[TRAIT]]
+	TRAIT <- traits [1]
 	for (j in 1:n.model) {
 		#ix <- which(data@scores[[TRAIT]][,models[j]] > data@threshold[TRAIT,models[j]])
-		ix <<- which (!is.na (data@scores[[TRAIT]][,models[j]])) 
-		mdl <<- data@scores[[TRAIT]][,models[j]] 
+		ix <- which (!is.na (data@scores[[TRAIT]][,models[j]])) 
+		mdl <- data@scores[[TRAIT]][,models[j]] 
 		markers <-  data.frame (SNP=data@map[ix,c("Marker")])
 		if (!is.null (snpsAnnFile)) 
 			snpAnn  <- merge (markers, snpsAnnotations, by.x="SNP",by.y="SNP_id", sort=F)[,c(2,7)]
