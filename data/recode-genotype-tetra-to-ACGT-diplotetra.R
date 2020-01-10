@@ -9,7 +9,7 @@ library(parallel)
 
 args = commandArgs(trailingOnly = TRUE)
 
-args = c(genotype="agrosavia-genotype-tetra-RENAMED.tbl", snps="solcap-SNPs-refs-alts-AGs.tbl")
+args = c(genotype="agrosavia-genotype-CCC-CLEANED", snps="solcap-SNPs-refs-alts-AGs.tbl")
 genotypeFile = args [1]
 snpsFile     = args [2]
 outName      = strsplit (genotypeFile, split="[.]")[[1]][1]
